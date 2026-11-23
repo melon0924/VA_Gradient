@@ -1,0 +1,13 @@
+// 两种求导模式的区别：B、C 的默认值依赖 A。
+// effective 模式固定有效 B/C，d(ids)/d(A)=0。
+// defaults 模式传播 A -> B -> C，d(ids)/d(A)=3。
+// 如果显式 --param B=5，再对 A 求导，B 固定，结果为 0。
+module ad_parameter_chain;
+    parameter real A = 2;
+    parameter real B = 3 * A;
+    localparam real C = B + 1;
+    real ids;
+    analog begin
+        ids = C;
+    end
+endmodule

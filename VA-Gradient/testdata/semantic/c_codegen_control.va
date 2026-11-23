@@ -1,0 +1,11 @@
+// EN=0 时 ids 没有赋值；导出必须保留“未定义”，不能伪造零。
+module c_codegen_control;
+    parameter real P=2 from (0:inf);
+    parameter integer EN=0 from [0:1];
+    localparam real FROZEN=3;
+    real x,ids;
+    analog begin
+        x=P+FROZEN;
+        if(EN) ids=P*P;
+    end
+endmodule

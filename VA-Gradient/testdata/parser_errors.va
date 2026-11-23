@@ -1,0 +1,15 @@
+// 故意保留两处语法错误，用来观察 Error 事件和后续语句的恢复。
+module parser_errors(d, g, s);
+    inout d, g, s;
+    electrical d, g, s;
+    real ids, vgs, vds;
+
+    analog begin
+        vgs = V(g, s);
+        ids = vgs + ;       // 错误 1：加号后面缺少表达式。
+        vds = V(d, s);      // 仍应被识别为完整赋值语句。
+        ids = vgs * vds     // 错误 2：这里缺少分号。
+        ids = 0.0;          // 仍应保留这一条赋值。
+        I(d, s) <+ ids;
+    end
+endmodule

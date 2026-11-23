@@ -1,0 +1,8 @@
+// simple_mos 的默认参数。重复包含时由宏保护避免再次定义。
+`ifndef SIMPLE_MOS_DEFAULTS_VAMS
+`define SIMPLE_MOS_DEFAULTS_VAMS 1
+
+`define DEFAULT_VTH 0.45
+`define DEFAULT_GAIN 1m
+
+`endif

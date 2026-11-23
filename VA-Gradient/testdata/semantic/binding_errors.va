@@ -1,0 +1,12 @@
+// 语法正确，故意保留三个 H1 名称绑定问题。
+module binding_errors(d, g, s);
+    inout d, g, s;
+    electrical d, g, s;
+    parameter real G0 = 1m;
+    parameter real G0 = 2m; // 重复参数；应关联到上一处定义。
+    real ids;
+    analog begin
+        ids = G0 * missing_voltage; // 未定义变量。
+        unknown_fn(ids);           // 未定义调用。
+    end
+endmodule

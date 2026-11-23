@@ -1,0 +1,58 @@
+if(NOT DEFINED VAGRAD_EXE OR NOT DEFINED TEST_DATA_DIR OR NOT DEFINED TEST_WORK_DIR)
+    message(FATAL_ERROR "VAGRAD_EXE, TEST_DATA_DIR and TEST_WORK_DIR are required")
+endif()
+file(MAKE_DIRECTORY "${TEST_WORK_DIR}")
+set(main "${TEST_DATA_DIR}/simple_mos.va")
+set(header "${TEST_DATA_DIR}/include/simple_mos_defaults.vams")
+set(broken "${TEST_DATA_DIR}/parser_errors.va")
+set(ast "${TEST_WORK_DIR}/model.ast.txt")
+set(broken_ast "${TEST_WORK_DIR}/broken.ast.txt")
+
+execute_process(COMMAND "${VAGRAD_EXE}" ast "${main}" -DSOFT_THRESHOLD -D TRACE_MOS -o "${ast}"
+    RESULT_VARIABLE status ERROR_VARIABLE errors)
+if(NOT status EQUAL 0)
+    message(FATAL_ERROR "AST View must use existing preprocess/parse options: ${errors}")
+endif()
+file(READ "${ast}" output)
+string(FIND "${output}" "NameExpr name=\"sqrt\"" soft)
+string(FIND "${output}" "NameExpr name=\"$strobe\"" trace)
+string(FIND "${output}" "initializer: LiteralExpr value=\"1m\"" gain)
+string(FIND "${output}" "Origin(File[3]" origin)
+if(soft EQUAL -1 OR trace EQUAL -1 OR gain EQUAL -1 OR origin EQUAL -1)
+    message(FATAL_ERROR "AST output must contain typed fields and original header source")
+endif()
+
+execute_process(COMMAND "${VAGRAD_EXE}" ast "${broken}" -o "${broken_ast}"
+    RESULT_VARIABLE status ERROR_VARIABLE errors)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "PARSE_EXPRESSION")
+    message(FATAL_ERROR "invalid input must keep parser diagnostics: ${errors}")
+endif()
+file(READ "${broken_ast}" output)
+if(NOT output MATCHES "rhs: ErrorNode missing=true" OR NOT output MATCHES "ContributionStmt")
+    message(FATAL_ERROR "partial AST View must retain missing operand and later valid statements")
+endif()
+
+file(READ "${header}" before)
+execute_process(COMMAND "${VAGRAD_EXE}" ast "${main}" -o "${header}"
+    RESULT_VARIABLE status OUTPUT_QUIET ERROR_VARIABLE errors)
+file(READ "${header}" after)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "CLI_OUTPUT" OR NOT before STREQUAL after)
+    message(FATAL_ERROR "AST output must not overwrite an input header")
+endif()
+
+execute_process(COMMAND "${VAGRAD_EXE}" ast "${main}" --dump-events
+    RESULT_VARIABLE status OUTPUT_QUIET ERROR_QUIET)
+if(NOT status EQUAL 2)
+    message(FATAL_ERROR "AST command must reject options belonging to another stage")
+endif()
+
+set(missing "${TEST_WORK_DIR}/missing.va")
+set(existing "${TEST_WORK_DIR}/existing.ast.txt")
+file(WRITE "${missing}" "`include \"not-provided.vams\"\nmodule m; endmodule\n")
+file(WRITE "${existing}" "previous report")
+execute_process(COMMAND "${VAGRAD_EXE}" ast "${missing}" -o "${existing}"
+    RESULT_VARIABLE status OUTPUT_QUIET ERROR_VARIABLE errors)
+file(READ "${existing}" after)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "PP_INCLUDE_LOAD" OR NOT after STREQUAL "previous report")
+    message(FATAL_ERROR "AST generation must stop on preprocessor errors without replacing previous output")
+endif()

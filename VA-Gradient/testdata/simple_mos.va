@@ -1,0 +1,58 @@
+module simple_mos(d, g, s);
+    // 词法评估样例：保留中文注释、空白和原始宏调用。
+    /*
+     * 这段注释中的 if、<+ 和 `define COMMENT_ONLY 99 都属于注释。
+     * Lexer 应把整个块保留为一个 BlockComment token。
+     */
+
+    // 默认参数来自相对路径头文件，Preprocessor 从当前文件目录查找。
+    `include "include/simple_mos_defaults.vams"
+
+    // 带参数宏和多行宏仍在本文件中定义。
+    `define SQUARE(x) ((x) * (x))
+    `define OVERDRIVE(vgs, vth) \
+        ((vgs) - (vth))
+
+    // 两个条件编译分支都保留在原始 token 流中。
+    `ifdef SOFT_THRESHOLD
+        `define POSITIVE(x) (0.5 * ((x) + sqrt((x) * (x) + 1.0e-12)))
+    `else
+        `define POSITIVE(x) max((x), 0.0)
+    `endif
+
+    inout d, g, s;
+    electrical d, g, s;
+    branch (d, s) ds;
+
+    (* desc = "Gain for the \"simple MOS\" example", units = "A/V^2" *)
+    parameter real G0 = `DEFAULT_GAIN from (0:inf);
+    parameter real VTH0 = `DEFAULT_VTH from [0:inf);
+    parameter real L = 1u from (0:inf);
+    parameter real LEAK = 1e-12 from [0:inf);
+    parameter real TNOM = 3.0e2 from (0:inf);
+    parameter integer ENABLE = 1 from [0:1];
+    parameter integer TRACE_MASK = 8'h0F;
+    real vgs, vds, vov, ids, temperature_scale;
+
+    analog begin : evaluate_current
+        vgs = V(g, s);   // 函数调用后的行尾注释。
+        vds = V(d, s);
+        vov = `POSITIVE(`OVERDRIVE(vgs, VTH0));
+        temperature_scale = $temperature / TNOM;
+
+        ids = LEAK * vds;
+        if ((vov > 0.0) && (ENABLE != 0)) begin
+            if (vds < vov)
+                ids = G0 * (vov * vds - .5 * `SQUARE(vds));
+            else
+                ids = .5 * G0 * `SQUARE(vov);
+        end
+
+        // <+ 是单个贡献运算符；它前面的 I(ds) 是一个调用。
+        I(ds) <+ ids / temperature_scale;
+
+        `ifdef TRACE_MOS
+            $strobe("simple_mos: vgs=%g, ids=%g\nmask=%0h", vgs, ids, TRACE_MASK);
+        `endif
+    end
+endmodule

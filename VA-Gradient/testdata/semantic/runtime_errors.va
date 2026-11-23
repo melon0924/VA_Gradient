@@ -1,0 +1,6 @@
+// 默认值在 H2 中合法；H3 求值时发生除零。覆盖 DENOM=2 可以成功执行。
+module runtime_errors;
+    parameter real DENOM = 0;
+    real ids;
+    analog ids = 1.0 / DENOM;
+endmodule

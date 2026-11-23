@@ -1,0 +1,19 @@
+// C 后端数值参考：每个输出独立检查一个数学规则。
+module c_codegen_math;
+    parameter real P=.4 from (-.9:.9);
+    parameter real Q=1.3 from (0:inf);
+    real zmin,zmax,zabs,zsqrt,zexp,zln,zlog,zsin,zcos,ztan;
+    real zasin,zacos,zatan,zatan2,zsinh,zcosh,ztanh,zasinh,zacosh,zatanh;
+    real zceil,zfloor,zvt,zvtenv,zpow,zintpow;
+    analog begin
+        zmin=min(P,Q); zmax=max(P,Q); zabs=abs(P);
+        zsqrt=sqrt(P+2); zexp=exp(P); zln=ln(P+2); zlog=log(P+2);
+        zsin=sin(P); zcos=cos(P); ztan=tan(P);
+        zasin=asin(P); zacos=acos(P); zatan=atan(P); zatan2=atan2(P,Q);
+        zsinh=sinh(P); zcosh=cosh(P); ztanh=tanh(P);
+        zasinh=asinh(P); zacosh=acosh(P+2); zatanh=atanh(P);
+        zceil=ceil(P); zfloor=floor(P);
+        zvt=$vt(P+300); zvtenv=$vt();
+        zpow=(P+2)**Q; zintpow=P**3;
+    end
+endmodule

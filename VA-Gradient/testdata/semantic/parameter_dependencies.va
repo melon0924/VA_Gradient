@@ -1,0 +1,14 @@
+// 覆盖 G0 后，仍使用默认式的 EFFECTIVE_GAIN 会重新计算。
+module parameter_dependencies(d, s);
+    inout d, s;
+    electrical d, s;
+    branch (d, s) ds;
+    parameter real G0 = 1m from (0 : inf);
+    parameter real SCALE = 2 from (0 : inf);
+    parameter real EFFECTIVE_GAIN = G0 * SCALE from (0 : inf);
+    real ids;
+    analog begin
+        ids = EFFECTIVE_GAIN * V(d, s);
+        I(ds) <+ ids;
+    end
+endmodule

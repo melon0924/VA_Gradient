@@ -1,0 +1,16 @@
+// 便于查看 phi：两条路径写同一个 ids，汇合后贡献电流。
+module ssa_branch(d, s);
+    inout d, s;
+    electrical d, s;
+    branch (d, s) ds;
+    parameter real G = 1m;
+    parameter integer ENABLE = 1;
+    real ids;
+    analog begin
+        if (ENABLE)
+            ids = 2.0 * G;
+        else
+            ids = 3.0 * G;
+        I(ds) <+ ids;
+    end
+endmodule

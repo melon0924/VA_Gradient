@@ -1,0 +1,53 @@
+if(NOT DEFINED VAGRAD_EXE OR NOT DEFINED TEST_DATA_DIR OR NOT DEFINED TEST_WORK_DIR)
+    message(FATAL_ERROR "VAGRAD_EXE, TEST_DATA_DIR and TEST_WORK_DIR are required")
+endif()
+file(MAKE_DIRECTORY "${TEST_WORK_DIR}")
+set(main "${TEST_DATA_DIR}/simple_mos.va")
+set(header "${TEST_DATA_DIR}/include/simple_mos_defaults.vams")
+set(binding_errors "${TEST_DATA_DIR}/semantic/binding_errors.va")
+set(hir "${TEST_WORK_DIR}/model.hir.txt")
+set(partial "${TEST_WORK_DIR}/errors.hir.txt")
+
+execute_process(COMMAND "${VAGRAD_EXE}" hir "${main}" -DSOFT_THRESHOLD -D TRACE_MOS -o "${hir}"
+    RESULT_VARIABLE status ERROR_VARIABLE errors)
+if(NOT status EQUAL 0)
+    message(FATAL_ERROR "H1 alternate model config failed: ${errors}")
+endif()
+file(READ "${hir}" output)
+string(FIND "${output}" "Call \"$strobe\"" trace)
+string(FIND "${output}" "Call \"sqrt\"" soft)
+if(trace EQUAL -1 OR soft EQUAL -1 OR NOT output MATCHES "errors=0" OR NOT output MATCHES "port=true")
+    message(FATAL_ERROR "H1 output must contain configured bindings and merged port information")
+endif()
+
+execute_process(COMMAND "${VAGRAD_EXE}" hir "${binding_errors}" -o "${partial}"
+    RESULT_VARIABLE status ERROR_VARIABLE errors)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "HIR_DUPLICATE" OR NOT errors MATCHES "HIR_UNDEFINED")
+    message(FATAL_ERROR "expected H1 duplicate/undefined diagnostics: ${errors}")
+endif()
+file(READ "${partial}" output)
+if(NOT output MATCHES "<unresolved>" OR NOT output MATCHES "Diagnostic" OR NOT output MATCHES "errors=3")
+    message(FATAL_ERROR "H1 errors must retain a reviewable partial binding report")
+endif()
+
+set(existing "${TEST_WORK_DIR}/existing.hir.txt")
+file(WRITE "${existing}" "previous result")
+execute_process(COMMAND "${VAGRAD_EXE}" hir "${TEST_DATA_DIR}/parser_errors.va" -o "${existing}"
+    RESULT_VARIABLE status ERROR_VARIABLE errors)
+file(READ "${existing}" after)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "PARSE_EXPRESSION" OR NOT after STREQUAL "previous result")
+    message(FATAL_ERROR "H1 must stop on parser errors before replacing previous output")
+endif()
+
+file(READ "${header}" before)
+execute_process(COMMAND "${VAGRAD_EXE}" hir "${main}" -o "${header}"
+    RESULT_VARIABLE status OUTPUT_QUIET ERROR_VARIABLE errors)
+file(READ "${header}" after)
+if(NOT status EQUAL 1 OR NOT errors MATCHES "CLI_OUTPUT" OR NOT after STREQUAL before)
+    message(FATAL_ERROR "H1 output must not overwrite input headers")
+endif()
+execute_process(COMMAND "${VAGRAD_EXE}" hir "${main}" --dump-events
+    RESULT_VARIABLE status OUTPUT_QUIET ERROR_QUIET)
+if(NOT status EQUAL 2)
+    message(FATAL_ERROR "H1 command must reject options belonging to another stage")
+endif()

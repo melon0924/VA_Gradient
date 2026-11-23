@@ -1,0 +1,10 @@
+// 语法及 H1 名称绑定成功，但 H2 应分别诊断参数写入和 Net 参与算术。
+module typed_errors;
+    parameter real G0 = 1m;
+    electrical d;
+    real ids;
+    analog begin
+        G0 = 2m;
+        ids = d + 1;
+    end
+endmodule
